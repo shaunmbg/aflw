@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 AFLW Ladder Dashboard</title>
+<style>
+  :root{
+    --surface-0:#ffffff; --surface-1:#f6f7f8; --surface-2:#eceef1;
+    --border:#e3e5e9; --border-strong:#c7cbd1;
+    --text-primary:#17181a; --text-secondary:#6b7280; --text-muted:#9aa0a8;
+    --bg-success:#dcfce7; --text-success:#15803d;
+    --bg-danger:#fee2e2;  --text-danger:#b91c1c;
+    --bg-warning:#fef3c7; --text-warning:#92400e;
+    --radius:10px;
+    --accent:#0f766e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--surface-0); color: var(--text-primary);
+    margin: 0; padding: 1.25rem; max-width: 1100px; margin-inline: auto;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); margin: 0 0 1.25rem; }
+  .btn-row { display:flex; gap:8px; margin-bottom:1rem; flex-wrap:wrap; }
+  button.viewbtn {
+    flex:1; min-width:140px; padding:10px 12px; border-radius:var(--radius);
+    border:1px solid var(--border-strong); background:var(--surface-1); color:var(--text-primary);
+    font-size:13px; font-weight:500; cursor:pointer;
+  }
+  button.viewbtn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:1rem; }
+  @media (max-width:640px){ .cards{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .card { background:var(--surface-1); border-radius:var(--radius); padding:0.75rem 1rem; }
+  .card p.label { font-size:12px; color:var(--text-secondary); margin:0 0 4px; }
+  .card p.value { font-size:18px; font-weight:600; margin:0; }
+  .card p.value.small { font-size:14px; }
+  table { border-collapse:collapse; font-size:13px; }
+  #ladder-table { width:100%; table-layout:fixed; }
+  #ladder-table th, #ladder-table td { padding:6px 4px; }
+  #ladder-table thead th { border-bottom:1px solid var(--border-strong); color:var(--text-secondary); text-align:left; font-weight:500; }
+  #ladder-table tbody tr { border-bottom:1px solid var(--border); }
+  .controls { display:flex; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-secondary); align-items:center; }
+  select { height:28px; font-size:12px; border-radius:6px; border:1px solid var(--border-strong); }
+  .formdot { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; font-size:10px; font-weight:600; margin-right:3px; }
+  .note { font-size:11px; color:var(--text-muted); margin-top:8px; }
+  .scroll-x { overflow-x:auto; }
+  #h2h-table td, #h2h-table th { width:26px; height:22px; text-align:center; font-size:11px; }
+  #h2h-table th { font-weight:500; color:var(--text-secondary); }
+  #h2h-table td.sticky, #h2h-table th.sticky, #grid-table td.sticky, #grid-table th.sticky { position:sticky; left:0; background:var(--surface-2); }
+  #grid-table td, #grid-table th { width:64px; height:44px; text-align:center; font-size:10px; line-height:1.25; }
+  #grid-table th { font-weight:500; color:var(--text-secondary); }
+  .view { display:none; }
+  .view.active { display:block; }
+  footer { margin-top:1.5rem; font-size:11px; color:var(--text-muted); border-top:1px solid var(--border); padding-top:0.75rem; }
+</style>
+</head>
+<body>
+
+<h1>2026 AFLW Ladder Dashboard</h1>
+<p class="subtitle">Through round 8 of 12 played. Remaining fixture and the finals series (QF/EF through Grand Final) shown greyed out.</p>
+
+<div class="btn-row">
+  <button class="viewbtn active" data-view="grid">Round-by-round grid</button>
+  <button class="viewbtn" data-view="ladder">Ladder and form</button>
+  <button class="viewbtn" data-view="h2h">Head-to-head matrix</button>
+</div>
+
+<div id="view-ladder" class="view">
+  <div class="cards">
+    <div class="card"><p class="label">Ladder leader</p><p class="value">North Melbourne</p></div>
+    <div class="card"><p class="label">Rounds completed</p><p class="value">8 of 12</p></div>
+    <div class="card"><p class="label">Hottest team (last 5)</p><p class="value">Geelong</p></div>
+    <div class="card"><p class="label">Next game (R9)</p><p class="value small">WB v ES, Fri, 9 Oct, 7:15 pm</p></div>
+  </div>
+  <div class="controls">
+    <label>Sort by
+      <select id="sort-select">
+        <option value="pts">Points</option>
+        <option value="pct">Percentage</option>
+        <option value="wins">Wins</option>
+        <option value="name">Team name</option>
+      </select>
+    </label>
+  </div>
+  <table id="ladder-table">
+    <colgroup><col style="width:28px"><col><col style="width:32px"><col style="width:70px"><col style="width:45px"><col style="width:35px"><col style="width:120px"></colgroup>
+    <thead><tr>
+      <th>#</th><th>Team</th><th style="text-align:center">P</th><th style="text-align:center">W-D-L</th>
+      <th style="text-align:right">%</th><th style="text-align:right">Pts</th><th>Form</th>
+    </tr></thead>
+    <tbody id="ladder-body"></tbody>
+  </table>
+  <p class="note">Ladder counts home-and-away games only (4 points a win, 2 a draw). Form shows the last 5 results including finals, most recent on the right. Top 8 rows are shaded to mark the finals cut-line.</p>
+</div>
+
+<div id="view-h2h" class="view">
+  <p class="note" style="margin-bottom:10px;">Row team's wins over column team in 2026 so far, finals included. Darker teal means more wins head-to-head.</p>
+  <div class="scroll-x"><table id="h2h-table"></table></div>
+</div>
+
+<div id="view-grid" class="view active">
+  <p class="note" style="margin-bottom:10px;">Rows ordered by current ladder position. Columns run R1&ndash;R12, then the finals (QE = Qualifying &amp; Elimination Finals, SF, PF, GF). Played games show score / H-A opponent / venue; upcoming games are greyed out. A blank finals cell means that team has no confirmed game that week.</p>
+  <div class="scroll-x"><table id="grid-table"></table></div>
+  <p class="note">Green = win, red = loss, amber = draw, grey = scheduled. Venue codes are the AFL's own abbreviations (e.g. IKP = IKON Park, MRVL = Marvel Stadium, BHA = Brighton Homes Arena).</p>
+</div>
+
+<footer>
+  72 of 117 games played. Data from the official AFL API (2026 NAB AFLW Season), latest result: Sun, 4 Oct, 5:05 pm (Melbourne time). Built by build-aflw-dashboard.js.
+</footer>
+
+<script>
+const teams = {
+  "North Melbourne":{"ab":"NM","p":8,"w":7,"d":0,"l":1,"f":507,"a":195,"pct":260,"pts":28,"form":["W","W","L","W","W"]},
+  "Melbourne":{"ab":"ME","p":8,"w":7,"d":0,"l":1,"f":498,"a":263,"pct":189.4,"pts":28,"form":["W","W","W","L","W"]},
+  "Geelong":{"ab":"GE","p":8,"w":7,"d":0,"l":1,"f":557,"a":384,"pct":145.1,"pts":28,"form":["W","W","W","W","W"]},
+  "Gold Coast":{"ab":"GC","p":8,"w":6,"d":0,"l":2,"f":379,"a":253,"pct":149.8,"pts":24,"form":["W","W","W","W","W"]},
+  "Carlton":{"ab":"CA","p":8,"w":6,"d":0,"l":2,"f":391,"a":270,"pct":144.8,"pts":24,"form":["W","L","L","W","W"]},
+  "Western Bulldogs":{"ab":"WB","p":8,"w":6,"d":0,"l":2,"f":334,"a":275,"pct":121.5,"pts":24,"form":["W","L","W","W","W"]},
+  "Sydney":{"ab":"SY","p":8,"w":6,"d":0,"l":2,"f":379,"a":347,"pct":109.2,"pts":24,"form":["L","W","W","W","L"]},
+  "Fremantle":{"ab":"FR","p":8,"w":4,"d":0,"l":4,"f":326,"a":290,"pct":112.4,"pts":16,"form":["W","W","L","W","L"]},
+  "Hawthorn":{"ab":"HW","p":8,"w":4,"d":0,"l":4,"f":342,"a":359,"pct":95.3,"pts":16,"form":["L","W","W","L","L"]},
+  "West Coast":{"ab":"WC","p":8,"w":4,"d":0,"l":4,"f":329,"a":392,"pct":83.9,"pts":16,"form":["L","W","W","W","W"]},
+  "Richmond":{"ab":"RI","p":8,"w":4,"d":0,"l":4,"f":323,"a":403,"pct":80.1,"pts":16,"form":["L","W","W","L","L"]},
+  "Adelaide":{"ab":"AD","p":8,"w":3,"d":0,"l":5,"f":345,"a":376,"pct":91.8,"pts":12,"form":["W","L","W","L","L"]},
+  "Port Adelaide":{"ab":"PA","p":8,"w":3,"d":0,"l":5,"f":275,"a":349,"pct":78.8,"pts":12,"form":["L","L","L","L","W"]},
+  "Brisbane Lions":{"ab":"BL","p":8,"w":2,"d":0,"l":6,"f":320,"a":356,"pct":89.9,"pts":8,"form":["W","L","L","L","L"]},
+  "GWS":{"ab":"GW","p":8,"w":1,"d":0,"l":7,"f":315,"a":441,"pct":71.4,"pts":4,"form":["L","L","L","L","L"]},
+  "Essendon":{"ab":"ES","p":8,"w":1,"d":0,"l":7,"f":273,"a":440,"pct":62,"pts":4,"form":["L","L","L","L","W"]},
+  "Collingwood":{"ab":"CW","p":8,"w":1,"d":0,"l":7,"f":249,"a":437,"pct":57,"pts":4,"form":["L","L","L","W","L"]},
+  "St Kilda":{"ab":"SK","p":8,"w":0,"d":0,"l":8,"f":185,"a":497,"pct":37.2,"pts":0,"form":["L","L","L","L","L"]}
+};
+
+const h2h = {"Adelaide":{"Adelaide":0,"Brisbane Lions":1,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":1,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":1,"Western Bulldogs":0},"Brisbane Lions":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":1,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Carlton":{"Adelaide":1,"Brisbane Lions":0,"Carlton":0,"Collingwood":1,"Essendon":0,"Fremantle":1,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":1,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":1,"St Kilda":1,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Collingwood":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Essendon":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Fremantle":{"Adelaide":1,"Brisbane Lions":0,"Carlton":0,"Collingwood":1,"Essendon":1,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":1,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Geelong":{"Adelaide":1,"Brisbane Lions":0,"Carlton":0,"Collingwood":1,"Essendon":1,"Fremantle":0,"Geelong":0,"Gold Coast":1,"GWS":0,"Hawthorn":1,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":1,"St Kilda":1,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Gold Coast":{"Adelaide":0,"Brisbane Lions":1,"Carlton":0,"Collingwood":1,"Essendon":1,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":1,"Richmond":0,"St Kilda":1,"Sydney":0,"West Coast":1,"Western Bulldogs":0},"GWS":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":1,"Western Bulldogs":0},"Hawthorn":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":1,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":1,"Port Adelaide":1,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":1},"Melbourne":{"Adelaide":0,"Brisbane Lions":1,"Carlton":1,"Collingwood":1,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":1,"Melbourne":0,"North Melbourne":0,"Port Adelaide":1,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":1,"Western Bulldogs":0},"North Melbourne":{"Adelaide":0,"Brisbane Lions":1,"Carlton":1,"Collingwood":0,"Essendon":0,"Fremantle":0,"Geelong":1,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":1,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":1,"Sydney":1,"West Coast":0,"Western Bulldogs":1},"Port Adelaide":{"Adelaide":1,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":1,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Richmond":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":1,"Essendon":1,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":1,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"St Kilda":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":0,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Sydney":{"Adelaide":1,"Brisbane Lions":1,"Carlton":0,"Collingwood":0,"Essendon":1,"Fremantle":0,"Geelong":0,"Gold Coast":0,"GWS":1,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":1,"Richmond":0,"St Kilda":1,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"West Coast":{"Adelaide":0,"Brisbane Lions":1,"Carlton":0,"Collingwood":0,"Essendon":1,"Fremantle":1,"Geelong":0,"Gold Coast":0,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":0,"Richmond":0,"St Kilda":1,"Sydney":0,"West Coast":0,"Western Bulldogs":0},"Western Bulldogs":{"Adelaide":0,"Brisbane Lions":0,"Carlton":0,"Collingwood":0,"Essendon":0,"Fremantle":1,"Geelong":0,"Gold Coast":1,"GWS":0,"Hawthorn":0,"Melbourne":0,"North Melbourne":0,"Port Adelaide":1,"Richmond":1,"St Kilda":1,"Sydney":1,"West Coast":0,"Western Bulldogs":0}};
+
+const grid = {
+"North Melbourne":{"1":{"opp":"Geelong","for":100,"against":27,"ha":"H","result":"W","venue":"MRVL"},"2":{"opp":"Brisbane Lions","for":44,"against":33,"ha":"A","result":"W","venue":"BHA"},"3":{"opp":"Western Bulldogs","for":70,"against":23,"ha":"H","result":"W","venue":"UTAS"},"4":{"opp":"St Kilda","for":99,"against":7,"ha":"A","result":"W","venue":"RSEA"},"5":{"opp":"Carlton","for":33,"against":23,"ha":"H","result":"W","venue":"ARD"},"6":{"opp":"Hawthorn","for":25,"against":32,"ha":"A","result":"L","venue":"CS"},"7":{"opp":"Melbourne","for":65,"against":34,"ha":"A","result":"W","venue":"IKP"},"8":{"opp":"Sydney","for":71,"against":16,"ha":"H","result":"W","venue":"ARD"},"9":{"opp":"Fremantle","ha":"H","venue":"ARD","scheduled":true,"start":"2026-10-11T01:35:00.000+0000"},"10":{"opp":"Essendon","ha":"A","venue":"WH","scheduled":true,"start":"2026-10-18T04:05:00.000+0000"},"11":{"opp":"Adelaide","ha":"H","venue":"NHO","scheduled":true,"start":"2026-10-25T02:05:00.000+0000"},"12":{"opp":"Richmond","ha":"A","venue":"WH","scheduled":true,"start":"2026-10-31T04:05:00.000+0000"}},
+"Melbourne":{"1":{"opp":"Hawthorn","for":60,"against":41,"ha":"A","result":"W","venue":"IKP"},"2":{"opp":"GWS","for":60,"against":12,"ha":"H","result":"W","venue":"CAS"},"3":{"opp":"Brisbane Lions","for":89,"against":33,"ha":"H","result":"W","venue":"CAS"},"4":{"opp":"West Coast","for":81,"against":44,"ha":"A","result":"W","venue":"MRP"},"5":{"opp":"Port Adelaide","for":74,"against":23,"ha":"H","result":"W","venue":"CAS"},"6":{"opp":"Carlton","for":58,"against":24,"ha":"H","result":"W","venue":"CAS"},"7":{"opp":"North Melbourne","for":34,"against":65,"ha":"H","result":"L","venue":"IKP"},"8":{"opp":"Collingwood","for":42,"against":21,"ha":"A","result":"W","venue":"VP"},"9":{"opp":"Gold Coast","ha":"A","venue":"GBRF","scheduled":true,"start":"2026-10-10T09:15:00.000+0000"},"10":{"opp":"Richmond","ha":"H","venue":"IKP","scheduled":true,"start":"2026-10-16T08:15:00.000+0000"},"11":{"opp":"Western Bulldogs","ha":"A","venue":"MWO","scheduled":true,"start":"2026-10-24T08:15:00.000+0000"},"12":{"opp":"Adelaide","ha":"A","venue":"UO","scheduled":true,"start":"2026-11-01T04:05:00.000+0000"}},
+"Geelong":{"1":{"opp":"North Melbourne","for":27,"against":100,"ha":"A","result":"L","venue":"MRVL"},"2":{"opp":"St Kilda","for":100,"against":15,"ha":"H","result":"W","venue":"GMHBA"},"3":{"opp":"Gold Coast","for":64,"against":57,"ha":"A","result":"W","venue":"PFS"},"4":{"opp":"Essendon","for":83,"against":51,"ha":"H","result":"W","venue":"GMHBA"},"5":{"opp":"Adelaide","for":57,"against":46,"ha":"A","result":"W","venue":"UO"},"6":{"opp":"Collingwood","for":90,"against":49,"ha":"A","result":"W","venue":"VP"},"7":{"opp":"Hawthorn","for":82,"against":46,"ha":"H","result":"W","venue":"GMHBA"},"8":{"opp":"Richmond","for":54,"against":20,"ha":"A","result":"W","venue":"IKP"},"9":{"opp":"GWS","ha":"H","venue":"GMHBA","scheduled":true,"start":"2026-10-10T06:05:00.000+0000"},"10":{"opp":"West Coast","ha":"A","venue":"SLR","scheduled":true,"start":"2026-10-17T08:15:00.000+0000"},"11":{"opp":"Fremantle","ha":"H","venue":"GMHBA","scheduled":true,"start":"2026-10-24T04:05:00.000+0000"},"12":{"opp":"Western Bulldogs","ha":"H","venue":"GMHBA","scheduled":true,"start":"2026-10-30T08:15:00.000+0000"}},
+"Gold Coast":{"1":{"opp":"Western Bulldogs","for":14,"against":40,"ha":"H","result":"L","venue":"PFS"},"2":{"opp":"West Coast","for":69,"against":34,"ha":"A","result":"W","venue":"MRP"},"3":{"opp":"Geelong","for":57,"against":64,"ha":"H","result":"L","venue":"PFS"},"4":{"opp":"Port Adelaide","for":17,"against":14,"ha":"A","result":"W","venue":"ALB"},"5":{"opp":"Collingwood","for":62,"against":32,"ha":"H","result":"W","venue":"PFS"},"6":{"opp":"Essendon","for":51,"against":10,"ha":"A","result":"W","venue":"WH"},"7":{"opp":"St Kilda","for":69,"against":39,"ha":"H","result":"W","venue":"PFS"},"8":{"opp":"Brisbane Lions","for":40,"against":20,"ha":"A","result":"W","venue":"BHA"},"9":{"opp":"Melbourne","ha":"H","venue":"GBRF","scheduled":true,"start":"2026-10-10T09:15:00.000+0000"},"10":{"opp":"Adelaide","ha":"A","venue":"UO","scheduled":true,"start":"2026-10-17T02:05:00.000+0000"},"11":{"opp":"Richmond","ha":"H","venue":"PFS","scheduled":true,"start":"2026-10-24T06:05:00.000+0000"},"12":{"opp":"GWS","ha":"A","venue":"HEN","scheduled":true,"start":"2026-11-01T01:35:00.000+0000"}},
+"Carlton":{"1":{"opp":"St Kilda","for":66,"against":40,"ha":"A","result":"W","venue":"MRVL"},"2":{"opp":"Adelaide","for":50,"against":23,"ha":"H","result":"W","venue":"IKP"},"3":{"opp":"Fremantle","for":48,"against":42,"ha":"A","result":"W","venue":"CAO"},"4":{"opp":"Collingwood","for":68,"against":29,"ha":"H","result":"W","venue":"IKP"},"5":{"opp":"North Melbourne","for":23,"against":33,"ha":"A","result":"L","venue":"ARD"},"6":{"opp":"Melbourne","for":24,"against":58,"ha":"A","result":"L","venue":"CAS"},"7":{"opp":"Richmond","for":76,"against":21,"ha":"H","result":"W","venue":"IKP"},"8":{"opp":"Hawthorn","for":36,"against":24,"ha":"H","result":"W","venue":"IKP"},"9":{"opp":"Sydney","ha":"A","venue":"HEN","scheduled":true,"start":"2026-10-11T04:05:00.000+0000"},"10":{"opp":"Western Bulldogs","ha":"H","venue":"IKP","scheduled":true,"start":"2026-10-17T04:05:00.000+0000"},"11":{"opp":"GWS","ha":"H","venue":"IKP","scheduled":true,"start":"2026-10-25T06:05:00.000+0000"},"12":{"opp":"Brisbane Lions","ha":"A","venue":"BHA","scheduled":true,"start":"2026-10-31T06:05:00.000+0000"}},
+"Western Bulldogs":{"1":{"opp":"Gold Coast","for":40,"against":14,"ha":"A","result":"W","venue":"PFS"},"2":{"opp":"Richmond","for":48,"against":37,"ha":"H","result":"W","venue":"MWO"},"3":{"opp":"North Melbourne","for":23,"against":70,"ha":"A","result":"L","venue":"UTAS"},"4":{"opp":"Sydney","for":60,"against":33,"ha":"H","result":"W","venue":"MWO"},"5":{"opp":"Hawthorn","for":30,"against":41,"ha":"A","result":"L","venue":"KCC"},"6":{"opp":"Fremantle","for":40,"against":30,"ha":"A","result":"W","venue":"CAO"},"7":{"opp":"Port Adelaide","for":62,"against":49,"ha":"H","result":"W","venue":"MWO"},"8":{"opp":"St Kilda","for":31,"against":1,"ha":"H","result":"W","venue":"MARS"},"9":{"opp":"Essendon","ha":"H","venue":"MWO","scheduled":true,"start":"2026-10-09T08:15:00.000+0000"},"10":{"opp":"Carlton","ha":"A","venue":"IKP","scheduled":true,"start":"2026-10-17T04:05:00.000+0000"},"11":{"opp":"Melbourne","ha":"H","venue":"MWO","scheduled":true,"start":"2026-10-24T08:15:00.000+0000"},"12":{"opp":"Geelong","ha":"A","venue":"GMHBA","scheduled":true,"start":"2026-10-30T08:15:00.000+0000"}},
+"Sydney":{"1":{"opp":"Adelaide","for":61,"against":53,"ha":"A","result":"W","venue":"UO"},"2":{"opp":"Essendon","for":66,"against":42,"ha":"H","result":"W","venue":"SCG"},"3":{"opp":"St Kilda","for":38,"against":15,"ha":"H","result":"W","venue":"CxC"},"4":{"opp":"Western Bulldogs","for":33,"against":60,"ha":"A","result":"L","venue":"MWO"},"5":{"opp":"GWS","for":87,"against":56,"ha":"H","result":"W","venue":"HEN"},"6":{"opp":"Port Adelaide","for":41,"against":27,"ha":"A","result":"W","venue":"ALB"},"7":{"opp":"Brisbane Lions","for":37,"against":23,"ha":"H","result":"W","venue":"HEN"},"8":{"opp":"North Melbourne","for":16,"against":71,"ha":"A","result":"L","venue":"ARD"},"9":{"opp":"Carlton","ha":"H","venue":"HEN","scheduled":true,"start":"2026-10-11T04:05:00.000+0000"},"10":{"opp":"Collingwood","ha":"A","venue":"WH","scheduled":true,"start":"2026-10-18T01:30:00.000+0000"},"11":{"opp":"West Coast","ha":"H","venue":"HEN","scheduled":true,"start":"2026-10-25T01:35:00.000+0000"},"12":{"opp":"Fremantle","ha":"A","venue":"CAO","scheduled":true,"start":"2026-11-01T06:05:00.000+0000"}},
+"Fremantle":{"1":{"opp":"Port Adelaide","for":20,"against":41,"ha":"H","result":"L","venue":"CAO"},"2":{"opp":"Collingwood","for":50,"against":30,"ha":"A","result":"W","venue":"VP"},"3":{"opp":"Carlton","for":42,"against":48,"ha":"H","result":"L","venue":"CAO"},"4":{"opp":"Richmond","for":60,"against":35,"ha":"A","result":"W","venue":"IKP"},"5":{"opp":"Essendon","for":37,"against":22,"ha":"H","result":"W","venue":"CAO"},"6":{"opp":"Western Bulldogs","for":30,"against":40,"ha":"H","result":"L","venue":"CAO"},"7":{"opp":"Adelaide","for":60,"against":35,"ha":"A","result":"W","venue":"UO"},"8":{"opp":"West Coast","for":27,"against":39,"ha":"A","result":"L","venue":"SLR"},"9":{"opp":"North Melbourne","ha":"A","venue":"ARD","scheduled":true,"start":"2026-10-11T01:35:00.000+0000"},"10":{"opp":"St Kilda","ha":"H","venue":"CAO","scheduled":true,"start":"2026-10-18T06:05:00.000+0000"},"11":{"opp":"Geelong","ha":"A","venue":"GMHBA","scheduled":true,"start":"2026-10-24T04:05:00.000+0000"},"12":{"opp":"Sydney","ha":"H","venue":"CAO","scheduled":true,"start":"2026-11-01T06:05:00.000+0000"}},
+"Hawthorn":{"1":{"opp":"Melbourne","for":41,"against":60,"ha":"H","result":"L","venue":"IKP"},"2":{"opp":"Port Adelaide","for":65,"against":33,"ha":"A","result":"W","venue":"ALB"},"3":{"opp":"Collingwood","for":54,"against":26,"ha":"A","result":"W","venue":"VP"},"4":{"opp":"Adelaide","for":39,"against":67,"ha":"H","result":"L","venue":"KCC"},"5":{"opp":"Western Bulldogs","for":41,"against":30,"ha":"H","result":"W","venue":"KCC"},"6":{"opp":"North Melbourne","for":32,"against":25,"ha":"H","result":"W","venue":"CS"},"7":{"opp":"Geelong","for":46,"against":82,"ha":"A","result":"L","venue":"GMHBA"},"8":{"opp":"Carlton","for":24,"against":36,"ha":"A","result":"L","venue":"IKP"},"9":{"opp":"Brisbane Lions","ha":"H","venue":"KCC","scheduled":true,"start":"2026-10-11T02:05:00.000+0000"},"10":{"opp":"GWS","ha":"A","venue":"HEN","scheduled":true,"start":"2026-10-18T03:35:00.000+0000"},"11":{"opp":"Essendon","ha":"H","venue":"KCC","scheduled":true,"start":"2026-10-25T04:05:00.000+0000"},"12":{"opp":"West Coast","ha":"A","venue":"SLR","scheduled":true,"start":"2026-10-31T08:15:00.000+0000"}},
+"West Coast":{"1":{"opp":"GWS","for":42,"against":54,"ha":"A","result":"L","venue":"ES"},"2":{"opp":"Gold Coast","for":34,"against":69,"ha":"H","result":"L","venue":"MRP"},"3":{"opp":"Adelaide","for":43,"against":60,"ha":"A","result":"L","venue":"UO"},"4":{"opp":"Melbourne","for":44,"against":81,"ha":"H","result":"L","venue":"MRP"},"5":{"opp":"Brisbane Lions","for":46,"against":41,"ha":"H","result":"W","venue":"MRP"},"6":{"opp":"St Kilda","for":36,"against":25,"ha":"A","result":"W","venue":"RSEA"},"7":{"opp":"Essendon","for":45,"against":35,"ha":"A","result":"W","venue":"WH"},"8":{"opp":"Fremantle","for":39,"against":27,"ha":"H","result":"W","venue":"SLR"},"9":{"opp":"Port Adelaide","ha":"A","venue":"ALB","scheduled":true,"start":"2026-10-10T04:05:00.000+0000"},"10":{"opp":"Geelong","ha":"H","venue":"SLR","scheduled":true,"start":"2026-10-17T08:15:00.000+0000"},"11":{"opp":"Sydney","ha":"A","venue":"HEN","scheduled":true,"start":"2026-10-25T01:35:00.000+0000"},"12":{"opp":"Hawthorn","ha":"H","venue":"SLR","scheduled":true,"start":"2026-10-31T08:15:00.000+0000"}},
+"Richmond":{"1":{"opp":"Collingwood","for":46,"against":28,"ha":"H","result":"W","venue":"IKP"},"2":{"opp":"Western Bulldogs","for":37,"against":48,"ha":"A","result":"L","venue":"MWO"},"3":{"opp":"Essendon","for":38,"against":33,"ha":"A","result":"W","venue":"TIO"},"4":{"opp":"Fremantle","for":35,"against":60,"ha":"H","result":"L","venue":"IKP"},"5":{"opp":"St Kilda","for":58,"against":43,"ha":"H","result":"W","venue":"WH"},"6":{"opp":"GWS","for":68,"against":61,"ha":"A","result":"W","venue":"CGOM"},"7":{"opp":"Carlton","for":21,"against":76,"ha":"A","result":"L","venue":"IKP"},"8":{"opp":"Geelong","for":20,"against":54,"ha":"H","result":"L","venue":"IKP"},"9":{"opp":"Adelaide","ha":"H","venue":"IKP","scheduled":true,"start":"2026-10-10T08:15:00.000+0000"},"10":{"opp":"Melbourne","ha":"A","venue":"IKP","scheduled":true,"start":"2026-10-16T08:15:00.000+0000"},"11":{"opp":"Gold Coast","ha":"A","venue":"PFS","scheduled":true,"start":"2026-10-24T06:05:00.000+0000"},"12":{"opp":"North Melbourne","ha":"H","venue":"WH","scheduled":true,"start":"2026-10-31T04:05:00.000+0000"}},
+"Adelaide":{"1":{"opp":"Sydney","for":53,"against":61,"ha":"H","result":"L","venue":"UO"},"2":{"opp":"Carlton","for":23,"against":50,"ha":"A","result":"L","venue":"IKP"},"3":{"opp":"West Coast","for":60,"against":43,"ha":"H","result":"W","venue":"UO"},"4":{"opp":"Hawthorn","for":67,"against":39,"ha":"A","result":"W","venue":"KCC"},"5":{"opp":"Geelong","for":46,"against":57,"ha":"H","result":"L","venue":"UO"},"6":{"opp":"Brisbane Lions","for":39,"against":30,"ha":"A","result":"W","venue":"BHA"},"7":{"opp":"Fremantle","for":35,"against":60,"ha":"H","result":"L","venue":"UO"},"8":{"opp":"Port Adelaide","for":22,"against":36,"ha":"A","result":"L","venue":"ALB"},"9":{"opp":"Richmond","ha":"A","venue":"IKP","scheduled":true,"start":"2026-10-10T08:15:00.000+0000"},"10":{"opp":"Gold Coast","ha":"H","venue":"UO","scheduled":true,"start":"2026-10-17T02:05:00.000+0000"},"11":{"opp":"North Melbourne","ha":"A","venue":"NHO","scheduled":true,"start":"2026-10-25T02:05:00.000+0000"},"12":{"opp":"Melbourne","ha":"H","venue":"UO","scheduled":true,"start":"2026-11-01T04:05:00.000+0000"}},
+"Port Adelaide":{"1":{"opp":"Fremantle","for":41,"against":20,"ha":"A","result":"W","venue":"CAO"},"2":{"opp":"Hawthorn","for":33,"against":65,"ha":"H","result":"L","venue":"ALB"},"3":{"opp":"GWS","for":52,"against":48,"ha":"A","result":"W","venue":"CGOM"},"4":{"opp":"Gold Coast","for":14,"against":17,"ha":"H","result":"L","venue":"ALB"},"5":{"opp":"Melbourne","for":23,"against":74,"ha":"A","result":"L","venue":"CAS"},"6":{"opp":"Sydney","for":27,"against":41,"ha":"H","result":"L","venue":"ALB"},"7":{"opp":"Western Bulldogs","for":49,"against":62,"ha":"A","result":"L","venue":"MWO"},"8":{"opp":"Adelaide","for":36,"against":22,"ha":"H","result":"W","venue":"ALB"},"9":{"opp":"West Coast","ha":"H","venue":"ALB","scheduled":true,"start":"2026-10-10T04:05:00.000+0000"},"10":{"opp":"Brisbane Lions","ha":"A","venue":"BHA","scheduled":true,"start":"2026-10-17T06:05:00.000+0000"},"11":{"opp":"Collingwood","ha":"H","venue":"ALB","scheduled":true,"start":"2026-10-23T08:15:00.000+0000"},"12":{"opp":"St Kilda","ha":"A","venue":"RSEA","scheduled":true,"start":"2026-10-31T02:05:00.000+0000"}},
+"Brisbane Lions":{"1":{"opp":"Essendon","for":85,"against":37,"ha":"A","result":"W","venue":"WH"},"2":{"opp":"North Melbourne","for":33,"against":44,"ha":"H","result":"L","venue":"BHA"},"3":{"opp":"Melbourne","for":33,"against":89,"ha":"A","result":"L","venue":"CAS"},"4":{"opp":"GWS","for":55,"against":24,"ha":"H","result":"W","venue":"BHA"},"5":{"opp":"West Coast","for":41,"against":46,"ha":"A","result":"L","venue":"MRP"},"6":{"opp":"Adelaide","for":30,"against":39,"ha":"H","result":"L","venue":"BHA"},"7":{"opp":"Sydney","for":23,"against":37,"ha":"A","result":"L","venue":"HEN"},"8":{"opp":"Gold Coast","for":20,"against":40,"ha":"H","result":"L","venue":"BHA"},"9":{"opp":"Hawthorn","ha":"A","venue":"KCC","scheduled":true,"start":"2026-10-11T02:05:00.000+0000"},"10":{"opp":"Port Adelaide","ha":"H","venue":"BHA","scheduled":true,"start":"2026-10-17T06:05:00.000+0000"},"11":{"opp":"St Kilda","ha":"A","venue":"RSEA","scheduled":true,"start":"2026-10-24T02:05:00.000+0000"},"12":{"opp":"Carlton","ha":"H","venue":"BHA","scheduled":true,"start":"2026-10-31T06:05:00.000+0000"}},
+"GWS":{"1":{"opp":"West Coast","for":54,"against":42,"ha":"H","result":"W","venue":"ES"},"2":{"opp":"Melbourne","for":12,"against":60,"ha":"A","result":"L","venue":"CAS"},"3":{"opp":"Port Adelaide","for":48,"against":52,"ha":"H","result":"L","venue":"CGOM"},"4":{"opp":"Brisbane Lions","for":24,"against":55,"ha":"A","result":"L","venue":"BHA"},"5":{"opp":"Sydney","for":56,"against":87,"ha":"A","result":"L","venue":"HEN"},"6":{"opp":"Richmond","for":61,"against":68,"ha":"H","result":"L","venue":"CGOM"},"7":{"opp":"Collingwood","for":25,"against":34,"ha":"A","result":"L","venue":"VP"},"8":{"opp":"Essendon","for":35,"against":43,"ha":"H","result":"L","venue":"HEN"},"9":{"opp":"Geelong","ha":"A","venue":"GMHBA","scheduled":true,"start":"2026-10-10T06:05:00.000+0000"},"10":{"opp":"Hawthorn","ha":"H","venue":"HEN","scheduled":true,"start":"2026-10-18T03:35:00.000+0000"},"11":{"opp":"Carlton","ha":"A","venue":"IKP","scheduled":true,"start":"2026-10-25T06:05:00.000+0000"},"12":{"opp":"Gold Coast","ha":"H","venue":"HEN","scheduled":true,"start":"2026-11-01T01:35:00.000+0000"}},
+"Essendon":{"1":{"opp":"Brisbane Lions","for":37,"against":85,"ha":"H","result":"L","venue":"WH"},"2":{"opp":"Sydney","for":42,"against":66,"ha":"A","result":"L","venue":"SCG"},"3":{"opp":"Richmond","for":33,"against":38,"ha":"H","result":"L","venue":"TIO"},"4":{"opp":"Geelong","for":51,"against":83,"ha":"A","result":"L","venue":"GMHBA"},"5":{"opp":"Fremantle","for":22,"against":37,"ha":"A","result":"L","venue":"CAO"},"6":{"opp":"Gold Coast","for":10,"against":51,"ha":"H","result":"L","venue":"WH"},"7":{"opp":"West Coast","for":35,"against":45,"ha":"H","result":"L","venue":"WH"},"8":{"opp":"GWS","for":43,"against":35,"ha":"A","result":"W","venue":"HEN"},"9":{"opp":"Western Bulldogs","ha":"A","venue":"MWO","scheduled":true,"start":"2026-10-09T08:15:00.000+0000"},"10":{"opp":"North Melbourne","ha":"H","venue":"WH","scheduled":true,"start":"2026-10-18T04:05:00.000+0000"},"11":{"opp":"Hawthorn","ha":"A","venue":"KCC","scheduled":true,"start":"2026-10-25T04:05:00.000+0000"},"12":{"opp":"Collingwood","ha":"H","venue":"WH","scheduled":true,"start":"2026-11-01T02:05:00.000+0000"}},
+"Collingwood":{"1":{"opp":"Richmond","for":28,"against":46,"ha":"A","result":"L","venue":"IKP"},"2":{"opp":"Fremantle","for":30,"against":50,"ha":"H","result":"L","venue":"VP"},"3":{"opp":"Hawthorn","for":26,"against":54,"ha":"H","result":"L","venue":"VP"},"4":{"opp":"Carlton","for":29,"against":68,"ha":"A","result":"L","venue":"IKP"},"5":{"opp":"Gold Coast","for":32,"against":62,"ha":"A","result":"L","venue":"PFS"},"6":{"opp":"Geelong","for":49,"against":90,"ha":"H","result":"L","venue":"VP"},"7":{"opp":"GWS","for":34,"against":25,"ha":"H","result":"W","venue":"VP"},"8":{"opp":"Melbourne","for":21,"against":42,"ha":"H","result":"L","venue":"VP"},"9":{"opp":"St Kilda","ha":"A","venue":"RSEA","scheduled":true,"start":"2026-10-10T02:05:00.000+0000"},"10":{"opp":"Sydney","ha":"H","venue":"WH","scheduled":true,"start":"2026-10-18T01:30:00.000+0000"},"11":{"opp":"Port Adelaide","ha":"A","venue":"ALB","scheduled":true,"start":"2026-10-23T08:15:00.000+0000"},"12":{"opp":"Essendon","ha":"A","venue":"WH","scheduled":true,"start":"2026-11-01T02:05:00.000+0000"}},
+"St Kilda":{"1":{"opp":"Carlton","for":40,"against":66,"ha":"H","result":"L","venue":"MRVL"},"2":{"opp":"Geelong","for":15,"against":100,"ha":"A","result":"L","venue":"GMHBA"},"3":{"opp":"Sydney","for":15,"against":38,"ha":"A","result":"L","venue":"CxC"},"4":{"opp":"North Melbourne","for":7,"against":99,"ha":"H","result":"L","venue":"RSEA"},"5":{"opp":"Richmond","for":43,"against":58,"ha":"A","result":"L","venue":"WH"},"6":{"opp":"West Coast","for":25,"against":36,"ha":"H","result":"L","venue":"RSEA"},"7":{"opp":"Gold Coast","for":39,"against":69,"ha":"A","result":"L","venue":"PFS"},"8":{"opp":"Western Bulldogs","for":1,"against":31,"ha":"A","result":"L","venue":"MARS"},"9":{"opp":"Collingwood","ha":"H","venue":"RSEA","scheduled":true,"start":"2026-10-10T02:05:00.000+0000"},"10":{"opp":"Fremantle","ha":"A","venue":"CAO","scheduled":true,"start":"2026-10-18T06:05:00.000+0000"},"11":{"opp":"Brisbane Lions","ha":"H","venue":"RSEA","scheduled":true,"start":"2026-10-24T02:05:00.000+0000"},"12":{"opp":"Port Adelaide","ha":"H","venue":"RSEA","scheduled":true,"start":"2026-10-31T02:05:00.000+0000"}}
+};
+
+const teamOrder = ["North Melbourne","Melbourne","Geelong","Gold Coast","Carlton","Western Bulldogs","Sydney","Fremantle","Hawthorn","West Coast","Richmond","Adelaide","Port Adelaide","Brisbane Lions","GWS","Essendon","Collingwood","St Kilda"];
+const rounds = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+const roundLabels = {"1":"R1","2":"R2","3":"R3","4":"R4","5":"R5","6":"R6","7":"R7","8":"R8","9":"R9","10":"R10","11":"R11","12":"R12","13":"QE","14":"SF","15":"PF","16":"GF"};
+const lastHomeAwayRound = 12;
+
+function formDot(r){
+  const bg = r==='W' ? 'var(--bg-success)' : (r==='L' ? 'var(--bg-danger)' : 'var(--bg-warning)');
+  const col = r==='W' ? 'var(--text-success)' : (r==='L' ? 'var(--text-danger)' : 'var(--text-warning)');
+  return '<span class="formdot" style="background:'+bg+';color:'+col+';">'+r+'</span>';
+}
+
+function renderLadder(sortKey){
+  let arr = Object.keys(teams).map(name => Object.assign({name}, teams[name]));
+  if(sortKey === 'pts') arr.sort((a,b)=> teamOrder.indexOf(a.name)-teamOrder.indexOf(b.name));
+  else if(sortKey === 'pct') arr.sort((a,b)=> b.pct-a.pct);
+  else if(sortKey === 'wins') arr.sort((a,b)=> b.w-a.w || b.pct-a.pct);
+  else arr.sort((a,b)=> a.name.localeCompare(b.name));
+  document.getElementById('ladder-body').innerHTML = arr.map(t=>{
+    const rank = teamOrder.indexOf(t.name)+1;
+    const shade = rank<=8 ? ' style="background:var(--surface-1);"' : '';
+    return '<tr'+shade+'>'
+      + '<td>'+rank+'</td>'
+      + '<td style="font-weight:600;">'+t.name+'</td>'
+      + '<td style="text-align:center;">'+t.p+'</td>'
+      + '<td style="text-align:center;">'+t.w+'-'+t.d+'-'+t.l+'</td>'
+      + '<td style="text-align:right;">'+t.pct.toFixed(1)+'</td>'
+      + '<td style="text-align:right;font-weight:600;">'+t.pts+'</td>'
+      + '<td style="white-space:nowrap;">'+t.form.map(formDot).join('')+'</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function teal(n){ return n===0 ? 'var(--surface-1)' : (n===1 ? '#9FE1CB' : '#1D9E75'); }
+function tealText(n){ return n>=1 ? '#04342C' : 'var(--text-muted)'; }
+
+function renderH2H(){
+  let html = '<thead><tr><th class="sticky"></th>';
+  teamOrder.forEach(t=>{ html += '<th>'+teams[t].ab+'</th>'; });
+  html += '</tr></thead><tbody>';
+  teamOrder.forEach(row=>{
+    html += '<tr><td class="sticky" style="font-weight:600;text-align:left;padding:4px 6px;">'+teams[row].ab+'</td>';
+    teamOrder.forEach(col=>{
+      if(row===col){ html += '<td style="background:var(--surface-0);color:var(--text-muted);">-</td>'; }
+      else {
+        const n = h2h[row][col];
+        html += '<td style="background:'+teal(n)+';color:'+tealText(n)+';font-weight:600;">'+(n>0?n:'')+'</td>';
+      }
+    });
+    html += '</tr>';
+  });
+  document.getElementById('h2h-table').innerHTML = html + '</tbody>';
+}
+
+function resultColors(result){
+  if(result==='W') return {bg:'var(--bg-success)', fg:'var(--text-success)'};
+  if(result==='L') return {bg:'var(--bg-danger)', fg:'var(--text-danger)'};
+  return {bg:'var(--bg-warning)', fg:'var(--text-warning)'};
+}
+
+function renderGrid(){
+  let html = '<thead><tr><th class="sticky" style="text-align:left;padding:4px 6px;">Team</th>';
+  rounds.forEach(r=>{ html += '<th'+(r===lastHomeAwayRound+1?' style="border-left:2px solid var(--border-strong);"':'')+'>'+roundLabels[r]+'</th>'; });
+  html += '</tr></thead><tbody>';
+  teamOrder.forEach((name,i)=>{
+    html += '<tr><td class="sticky" style="font-weight:600;text-align:left;padding:4px 6px;border-right:1px solid var(--border);">'+(i+1)+'. '+teams[name].ab+'</td>';
+    rounds.forEach(r=>{
+      const g = grid[name][String(r)];
+      const sep = r===lastHomeAwayRound+1 ? 'border-left:2px solid var(--border-strong);' : '';
+      if(!g){
+        html += '<td style="'+sep+'color:var(--text-muted);background:var(--surface-0);">'+(r<=lastHomeAwayRound?'bye':'')+'</td>';
+        return;
+      }
+      const oppAb = teams[g.opp] ? teams[g.opp].ab : g.opp;
+      if(g.scheduled){
+        html += '<td style="'+sep+'background:var(--surface-1);color:var(--text-muted);">'
+          + '<div style="font-size:9px;">'+g.ha+' '+oppAb+'</div>'
+          + '<div style="font-size:9px;">'+g.venue+'</div>'
+          + '</td>';
+      } else {
+        const c = resultColors(g.result);
+        html += '<td style="'+sep+'background:'+c.bg+';color:'+c.fg+';">'
+          + '<div style="font-weight:600;">'+g.for+'-'+g.against+'</div>'
+          + '<div style="font-size:9px;">'+g.ha+' '+oppAb+'</div>'
+          + '<div style="font-size:9px;">'+g.venue+'</div>'
+          + '</td>';
+      }
+    });
+    html += '</tr>';
+  });
+  document.getElementById('grid-table').innerHTML = html + '</tbody>';
+}
+
+document.getElementById('sort-select').addEventListener('change', e => renderLadder(e.target.value));
+document.querySelectorAll('.viewbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.viewbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+renderLadder('pts');
+renderH2H();
+renderGrid();
+</script>
+</body>
+</html>
